@@ -24,4 +24,14 @@ public class TvMazeClient {
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
     }
+    
+    public TvMazeSearchResponse.TvMazeShow getShowById(Long showId) {
+        return restClient
+                .get()
+                .uri("/shows/{showId}", showId)
+                .retrieve()
+                .body(TvMazeSearchResponse.TvMazeShow.class);
+    }
+    
+    
 }

@@ -22,6 +22,10 @@ public class ShowService {
 
         return tvMazeShows.stream().map(this::toSearchResponse).toList();
     }
+    
+    public TvMazeSearchResponse.TvMazeShow getShowById(Long showId) {
+        return tvMazeClient.getShowById(showId);
+    }
 
     private ShowSearchResponse toSearchResponse( TvMazeSearchResponse tvMazeResponse) {
 

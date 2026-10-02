@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
+import com.ehj.tvmaze_api_middleware.dto.ShowResponse;
+
 @RestController
 @RequestMapping("/api/shows")
 public class ShowController {
@@ -30,7 +32,7 @@ public class ShowController {
     }
     
     @GetMapping("/{showId}")
-    public TvMazeSearchResponse.TvMazeShow getShowById( @PathVariable Long showId ) {
+    public ShowResponse getShowById( @PathVariable Long showId ) {
 
         return showService.getShowById(showId);
     }

@@ -1,24 +1,30 @@
 package com.ehj.tvmaze_api_middleware.service;
 
 import com.ehj.tvmaze_api_middleware.client.TvMazeClient;
+import com.ehj.tvmaze_api_middleware.dto.CommentResponse;
 import com.ehj.tvmaze_api_middleware.dto.ShowSearchResponse;
 import com.ehj.tvmaze_api_middleware.dto.TvMazeSearchResponse;
 import com.ehj.tvmaze_api_middleware.model.Show;
+import com.ehj.tvmaze_api_middleware.repository.CommentRepository;
 import com.ehj.tvmaze_api_middleware.repository.ShowRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+
+import com.ehj.tvmaze_api_middleware.dto.ShowResponse;
 
 @Service
 public class ShowService {
 
     private final TvMazeClient tvMazeClient;
     private final ShowRepository showRepository;
+    private final CommentRepository commentRepository;
 
-    public ShowService( TvMazeClient tvMazeClient, ShowRepository showRepository) {
+    public ShowService( TvMazeClient tvMazeClient, ShowRepository showRepository, CommentRepository commentRepository) {
 
         this.tvMazeClient = tvMazeClient;
         this.showRepository = showRepository;
+        this.commentRepository = commentRepository;
     }
 
     public List<ShowSearchResponse> searchShows( String query ) {
@@ -31,8 +37,17 @@ public class ShowService {
     private ShowSearchResponse toSearchResponse( TvMazeSearchResponse tvMazeResponse ) {
 
         TvMazeSearchResponse.TvMazeShow show = tvMazeResponse.show();
+        
+        List<CommentResponse> comments =
+                commentRepository.findByShowId(show.id())
+                        .stream()
+                        .map(comment -> new CommentResponse(
+                                comment.getComment(),
+                                comment.getRating()
+                        ))
+                        .toList();
 
-        return new ShowSearchResponse( show.id(), show.name(), getChannel(show), show.summary(), show.genres() );
+        return new ShowSearchResponse( show.id(), show.name(), getChannel(show), show.summary(), show.genres(), comments );
     }
 
     private String getChannel( TvMazeSearchResponse.TvMazeShow show ) {
@@ -48,22 +63,38 @@ public class ShowService {
         return null;
     }
     
-    public TvMazeSearchResponse.TvMazeShow getShowById(Long showId) {
+    public ShowResponse getShowById(Long showId) {
 
         Show show = showRepository.findById(showId).orElse(null);
 
-        if (show != null) {
+        if (show == null) {
 
-            return toTvMazeShow(show);
+            TvMazeSearchResponse.TvMazeShow tvMazeShow =
+                    tvMazeClient.getShowById(showId);
+
+            show = toShow(tvMazeShow);
+
+            showRepository.save(show);
         }
 
-        TvMazeSearchResponse.TvMazeShow tvMazeShow = tvMazeClient.getShowById(showId);
+        List<CommentResponse> comments =
+                commentRepository.findByShowId(showId)
+                        .stream()
+                        .map(comment -> new CommentResponse(
+                                comment.getComment(),
+                                comment.getRating()
+                        ))
+                        .toList();
 
-        Show showToSave = toShow(tvMazeShow);
-
-        showRepository.save(showToSave);
-
-        return tvMazeShow;
+        return new ShowResponse(
+                show.getId(),
+                show.getName(),
+                show.getNetwork(),
+                show.getWebChannel(),
+                show.getSummary(),
+                show.getGenres(),
+                comments
+        );
     }
 
     private Show toShow( TvMazeSearchResponse.TvMazeShow show ) {
@@ -80,8 +111,4 @@ public class ShowService {
         return mongoShow;
     }
 
-    private TvMazeSearchResponse.TvMazeShow toTvMazeShow( Show show ) {
-
-        return new TvMazeSearchResponse.TvMazeShow( show.getId(), show.getName(), show.getNetwork(), show.getWebChannel(), show.getSummary(), show.getGenres() );
-    }
 }
